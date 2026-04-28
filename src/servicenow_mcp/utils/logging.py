@@ -1,7 +1,10 @@
 import logging
+import sys
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# MCP uses stdio for transport, so all logging must go to stderr
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
 
-# Logger instance
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("servicenow-mcp")
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
