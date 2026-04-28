@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "servicenow-mcp-python"
 version = "1.0.0"
-description = "Python MCP server for ServiceNow — ITSM, CMDB, HRSD, CSM, SecOps, and 400+ tools."
+description = "Python MCP server for ServiceNow — ITSM, CMDB, HRSD, CSM and more."
 requires-python = ">=3.11"
 license = "MIT"
 dependencies = [
