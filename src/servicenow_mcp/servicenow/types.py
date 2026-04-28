@@ -1,4 +1,39 @@
-class ServiceNowType:
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
+from __future__ import annotations
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+class BasicAuthConfig(BaseModel):
+    username: str
+    password: str
+
+
+class OAuthConfig(BaseModel):
+    client_id: str
+    client_secret: str
+    username: str
+    password: str
+
+
+class ServiceNowConfig(BaseModel):
+    instance_url: str
+    auth_method: Literal["basic", "oauth"] = "basic"
+    basic: BasicAuthConfig | None = None
+    oauth: OAuthConfig | None = None
+    max_retries: int = 3
+    retry_delay_ms: int = 1000
+    request_timeout_s: int = 30
+
+
+class QueryRecordsParams(BaseModel):
+    table: str
+    query: str | None = None
+    fields: str | None = None
+    limit: int = 10
+    offset: int | None = None
+    order_by: str | None = None
+
+
+class QueryRecordsResponse(BaseModel):
+    count: int
+    records: list[dict]
