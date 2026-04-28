@@ -1,19 +1,10 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool]
+name = "servicenow-mcp"
+version = "0.1.0"
+description = "A minimal ServiceNow MCP compliant server."
 
-[project]
-name = "servicenow-mcp-python"
-version = "1.0.0"
-description = "Python MCP server for ServiceNow — ITSM, CMDB, HRSD, CSM and more."
-requires-python = ">=3.11"
-license = "MIT"
+[packages]
 dependencies = [
-    "mcp>=1.0.0",
-    "httpx>=0.27.0",
-    "pydantic>=2.0",
-    "python-dotenv>=1.0.0",
+    "flask",
+    "requests"
 ]
-
-[project.scripts]
-servicenow-mcp = "servicenow_mcp.server:main"

@@ -1,2 +1,3 @@
-"""ServiceNow MCP Server — Python implementation."""
-__version__ = "1.0.0"
+# __init__.py for servicenow_mcp
+
+__all__ = ['server', 'utils', 'servicenow', 'tools']

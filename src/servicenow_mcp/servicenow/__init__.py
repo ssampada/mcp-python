@@ -1,1 +1,3 @@
-"""ServiceNow client, types, and instance management."""
+# __init__.py for servicenow
+
+__all__ = ['client', 'types']

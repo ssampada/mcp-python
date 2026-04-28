@@ -1,16 +1,15 @@
-# ServiceNow MCP Server (Python)
+# ServiceNow MCP Server
 
-A Python implementation of the Model Context Protocol (MCP) server for ServiceNow.
+This is a minimal ServiceNow MCP compliant server implementation.
 
-## Overview
+## Usage
+To run the server, use the following command:
 
-This MCP server provides 400+ tools that allow AI models (Claude, GPT, etc.) to interact with ServiceNow instances via the standard Table API, Aggregate API, Attachment API, and more.
+    python -m src.servicenow_mcp.server
 
-## Quick Start
+## Requirements
+- Python 3.x
+- Additional libraries as specified in `pyproject.toml`
 
-```bash
-pip install -e .
-cp .env.example .env
-# Edit .env with your ServiceNow credentials
-python -m servicenow_mcp.server
-```
+## License
+This project is licensed under the MIT License.
