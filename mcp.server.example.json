@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "servicenow": {
+      "type": "streamable-http",
+      "url": "http://<server-ip>:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-personal-bearer-token>"
+      }
+    }
+  }
+}

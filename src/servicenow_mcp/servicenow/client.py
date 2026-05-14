@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import random
 import re
 import time
 import base64
+from enum import Enum
 from typing import Any
 
 import httpx
@@ -10,6 +13,94 @@ import httpx
 from .types import ServiceNowConfig, QueryRecordsParams, QueryRecordsResponse
 from ..utils.errors import ServiceNowError
 from ..utils.logging import logger
+
+
+# ── Circuit Breaker ─────────────────────────────────────────────────────
+
+class CircuitState(Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+
+class CircuitBreakerOpen(ServiceNowError):
+    def __init__(self, until: float) -> None:
+        remaining = max(0, until - time.monotonic())
+        super().__init__(
+            f"Circuit breaker is OPEN — retry after {remaining:.0f}s",
+            "CIRCUIT_OPEN",
+        )
+
+
+class CircuitBreaker:
+    """Thread-safe circuit breaker for shared ServiceNow instances."""
+
+    def __init__(
+        self,
+        failure_threshold: int = 5,
+        recovery_timeout: float = 30.0,
+        half_open_max_calls: int = 1,
+    ) -> None:
+        self._failure_threshold = failure_threshold
+        self._recovery_timeout = recovery_timeout
+        self._half_open_max_calls = half_open_max_calls
+
+        self._state = CircuitState.CLOSED
+        self._failure_count = 0
+        self._last_failure_time: float = 0.0
+        self._half_open_calls = 0
+        self._lock = asyncio.Lock()
+
+    @property
+    def state(self) -> CircuitState:
+        return self._state
+
+    async def _maybe_transition_to_half_open(self) -> None:
+        if (
+            self._state == CircuitState.OPEN
+            and time.monotonic() - self._last_failure_time >= self._recovery_timeout
+        ):
+            logger.info("Circuit breaker transitioning OPEN → HALF_OPEN")
+            self._state = CircuitState.HALF_OPEN
+            self._half_open_calls = 0
+
+    async def before_request(self) -> None:
+        async with self._lock:
+            await self._maybe_transition_to_half_open()
+
+            if self._state == CircuitState.OPEN:
+                raise CircuitBreakerOpen(
+                    self._last_failure_time + self._recovery_timeout
+                )
+
+            if self._state == CircuitState.HALF_OPEN:
+                if self._half_open_calls >= self._half_open_max_calls:
+                    raise CircuitBreakerOpen(
+                        self._last_failure_time + self._recovery_timeout
+                    )
+                self._half_open_calls += 1
+
+    async def record_success(self) -> None:
+        async with self._lock:
+            if self._state == CircuitState.HALF_OPEN:
+                logger.info("Circuit breaker transitioning HALF_OPEN → CLOSED")
+            self._state = CircuitState.CLOSED
+            self._failure_count = 0
+            self._half_open_calls = 0
+
+    async def record_failure(self) -> None:
+        async with self._lock:
+            self._failure_count += 1
+            self._last_failure_time = time.monotonic()
+
+            if self._state == CircuitState.HALF_OPEN:
+                logger.warning("Circuit breaker transitioning HALF_OPEN → OPEN")
+                self._state = CircuitState.OPEN
+            elif self._failure_count >= self._failure_threshold:
+                logger.warning(
+                    f"Circuit breaker OPEN after {self._failure_count} consecutive failures"
+                )
+                self._state = CircuitState.OPEN
 
 
 def _validate_table_name(table: str) -> str:
@@ -38,6 +129,7 @@ class ServiceNowClient:
         self.auth_method = config.auth_method
         self._basic = config.basic
         self._oauth = config.oauth
+        self._bearer = config.bearer
         self._max_retries = config.max_retries
         self._retry_delay = config.retry_delay_ms / 1000.0
         self._timeout = config.request_timeout_s
@@ -47,11 +139,17 @@ class ServiceNowClient:
 
         self._http = httpx.AsyncClient(timeout=self._timeout)
 
+        self._circuit = CircuitBreaker(
+            failure_threshold=config.cb_failure_threshold,
+            recovery_timeout=config.cb_recovery_timeout_s,
+            half_open_max_calls=config.cb_half_open_max_calls,
+        )
+
     # ── Authentication ──────────────────────────────────────────────────
 
     async def _authenticate(self) -> None:
-        if self.auth_method == "basic":
-            return  # basic auth is sent inline per-request
+        if self.auth_method in ("basic", "bearer"):
+            return  # basic/bearer auth is sent inline per-request
 
         # Reuse valid OAuth token
         if self._access_token and time.time() < self._token_expiry:
@@ -78,19 +176,35 @@ class ServiceNowClient:
         self._token_expiry = time.time() + token_data["expires_in"] * 0.9
 
     def _auth_headers(self) -> dict[str, str]:
+        # Per-request token forwarded from the MCP client takes priority.
+        # This allows a shared server to serve multiple developers, each
+        # passing their own service-account token via the Authorization header.
+        from ..utils.request_context import request_bearer_token
+        per_request = request_bearer_token.get()
+        if per_request:
+            return {"Authorization": f"Bearer {per_request}"}
+
         if self.auth_method == "basic" and self._basic:
             creds = base64.b64encode(
                 f"{self._basic.username}:{self._basic.password}".encode()
             ).decode()
             return {"Authorization": f"Basic {creds}"}
+        elif self.auth_method == "bearer" and self._bearer:
+            return {"Authorization": f"Bearer {self._bearer.token}"}
         elif self._access_token:
             return {"Authorization": f"Bearer {self._access_token}"}
         raise ServiceNowError("No valid auth credentials", "AUTHENTICATION_FAILED")
 
-    # ── Low-level request with retries ──────────────────────────────────
+    # ── Low-level request with retries + circuit breaker ─────────────────
+
+    _NON_RETRYABLE = frozenset({"AUTHENTICATION_FAILED", "INVALID_REQUEST", "NOT_FOUND", "INSUFFICIENT_PRIVILEGES"})
 
     async def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+        # Circuit breaker gate — fast-fail when the instance is unreachable
+        await self._circuit.before_request()
+
         last_error: Exception | None = None
+        extra_headers = kwargs.pop("headers", {})
 
         for attempt in range(self._max_retries + 1):
             try:
@@ -99,9 +213,17 @@ class ServiceNowClient:
                     "Accept": "application/json",
                     "Content-Type": "application/json",
                     **self._auth_headers(),
-                    **kwargs.pop("headers", {}),
+                    **extra_headers,
                 }
                 resp = await self._http.request(method, url, headers=headers, **kwargs)
+
+                # ── Rate-limit handling (429) ───────────────────────────
+                if resp.status_code == 429:
+                    retry_after = resp.headers.get("Retry-After")
+                    delay = float(retry_after) if retry_after else self._retry_delay * (2 ** attempt)
+                    logger.warning(f"Rate-limited (429), backing off {delay:.1f}s (attempt {attempt + 1})")
+                    await asyncio.sleep(delay)
+                    continue
 
                 if resp.status_code >= 400:
                     code_map = {401: "AUTHENTICATION_FAILED", 403: "INSUFFICIENT_PRIVILEGES",
@@ -113,21 +235,30 @@ class ServiceNowClient:
                         msg = resp.text
                     raise ServiceNowError(f"HTTP {resp.status_code}: {msg}", error_code)
 
+                # Success — record it for the circuit breaker
+                await self._circuit.record_success()
+
                 if resp.status_code == 204:
                     return None
                 return resp.json()
 
             except ServiceNowError as e:
-                if e.code in ("AUTHENTICATION_FAILED", "INVALID_REQUEST", "NOT_FOUND"):
+                if e.code in self._NON_RETRYABLE:
                     raise
                 last_error = e
+                await self._circuit.record_failure()
+            except httpx.TimeoutException as e:
+                last_error = e
+                await self._circuit.record_failure()
             except Exception as e:
                 last_error = e
+                await self._circuit.record_failure()
 
             if attempt < self._max_retries:
-                delay = self._retry_delay * (2 ** attempt)
-                logger.warning(f"Request failed, retrying in {delay:.1f}s (attempt {attempt + 1})")
-                import asyncio
+                # Exponential backoff with full jitter to spread concurrent callers
+                base_delay = self._retry_delay * (2 ** attempt)
+                delay = random.uniform(0, base_delay)
+                logger.warning(f"Request failed, retrying in {delay:.1f}s (attempt {attempt + 1}/{self._max_retries})")
                 await asyncio.sleep(delay)
 
         raise last_error or ServiceNowError("Request failed after retries", "NETWORK_ERROR")

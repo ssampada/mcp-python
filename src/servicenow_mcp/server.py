@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
-"""ServiceNow MCP Server — Python implementation."""
+"""ServiceNow MCP Server — Python implementation (FastMCP).
+
+Transports:
+  stdio             (default) — for local Claude / IDE use
+  sse               — HTTP Server-Sent Events (legacy clients)
+  streamable-http   — recommended for centralized server deployment
+
+Usage:
+  servicenow-mcp                          # stdio
+  servicenow-mcp --transport sse          # SSE on 0.0.0.0:8000
+  servicenow-mcp --transport streamable-http --host 0.0.0.0 --port 8080
+"""
 from __future__ import annotations
 
-import asyncio
+import argparse
 import json
 import os
 import sys
 
 from dotenv import load_dotenv
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
+from mcp.server.fastmcp import FastMCP
 from mcp.types import Tool, TextContent
 
 from .servicenow.client import ServiceNowClient
-from .servicenow.types import ServiceNowConfig, BasicAuthConfig, OAuthConfig
+from .servicenow.types import ServiceNowConfig, BasicAuthConfig, OAuthConfig, BearerTokenConfig
 from .tools import get_tools, execute_tool
 from .utils.errors import ServiceNowError
 from .utils.logging import logger
@@ -30,11 +40,16 @@ def _build_config() -> ServiceNowConfig:
 
     basic = None
     oauth = None
+    bearer = None
 
     if auth_method == "basic":
         basic = BasicAuthConfig(
             username=os.environ.get("SERVICENOW_BASIC_USERNAME", ""),
             password=os.environ.get("SERVICENOW_BASIC_PASSWORD", ""),
+        )
+    elif auth_method == "bearer":
+        bearer = BearerTokenConfig(
+            token=os.environ.get("SERVICENOW_BEARER_TOKEN", ""),
         )
     else:
         oauth = OAuthConfig(
@@ -49,19 +64,50 @@ def _build_config() -> ServiceNowConfig:
         auth_method=auth_method,
         basic=basic,
         oauth=oauth,
+        bearer=bearer,
+        max_retries=int(os.getenv("SERVICENOW_MAX_RETRIES", "3")),
+        retry_delay_ms=int(os.getenv("SERVICENOW_RETRY_DELAY_MS", "1000")),
+        request_timeout_s=int(os.getenv("SERVICENOW_REQUEST_TIMEOUT_S", "30")),
+        cb_failure_threshold=int(os.getenv("SERVICENOW_CB_FAILURE_THRESHOLD", "5")),
+        cb_recovery_timeout_s=int(os.getenv("SERVICENOW_CB_RECOVERY_TIMEOUT_S", "30")),
+        cb_half_open_max_calls=int(os.getenv("SERVICENOW_CB_HALF_OPEN_MAX_CALLS", "1")),
     )
 
 
+mcp = FastMCP("servicenow-mcp")
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="ServiceNow MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "streamable-http"],
+        default=os.getenv("MCP_TRANSPORT", "stdio"),
+        help="Transport protocol (default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("MCP_HOST", "0.0.0.0"),
+        help="Bind host for HTTP transports (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("MCP_PORT", "8000")),
+        help="Bind port for HTTP transports (default: 8000)",
+    )
+    args = parser.parse_args()
+
     load_dotenv()
 
-    app = Server("servicenow-mcp")
     config = _build_config()
     client = ServiceNowClient(config)
     tools = get_tools()
 
-    @app.list_tools()
-    async def list_tools() -> list[Tool]:
+    server = mcp._mcp_server
+
+    @server.list_tools()
+    async def _list_tools() -> list[Tool]:
         return [
             Tool(
                 name=t["name"],
@@ -71,8 +117,8 @@ def main() -> None:
             for t in tools
         ]
 
-    @app.call_tool()
-    async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    @server.call_tool()
+    async def _call_tool(name: str, arguments: dict) -> list[TextContent]:
         logger.info(f"Tool called: {name}")
         try:
             result = await execute_tool(client, name, arguments)
@@ -85,12 +131,18 @@ def main() -> None:
             logger.error(f"Unexpected error: {name} — {e}")
             return [TextContent(type="text", text=f"Error: {e}")]
 
-    async def run():
-        async with stdio_server() as (read_stream, write_stream):
-            await app.run(read_stream, write_stream, app.create_initialization_options())
+    logger.info(f"servicenow-mcp starting [{len(tools)} tools] transport={args.transport}")
+    if args.transport == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        import uvicorn
+        from .utils.auth_middleware import BearerPassthroughMiddleware
 
-    logger.info(f"servicenow-mcp Python server starting [{len(tools)} tools]")
-    asyncio.run(run())
+        base_app = mcp.sse_app() if args.transport == "sse" else mcp.streamable_http_app()
+        app = BearerPassthroughMiddleware(base_app)
+
+        logger.info(f"Listening on {args.host}:{args.port} — bearer token forwarding enabled")
+        uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":

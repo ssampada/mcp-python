@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "servicenow": {
+      "command": ".venv/bin/servicenow-mcp",
+      "env": {
+        "SERVICENOW_INSTANCE_URL": "https://akamaisddevup.service-now.com/"
+      }
+    }
+  }
+}

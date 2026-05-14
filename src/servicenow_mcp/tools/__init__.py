@@ -3,26 +3,76 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from servicenow_mcp.tools import catalog, change, knowledge, problem, task, user
+
+
 from ..servicenow.client import ServiceNowClient
 from ..utils.errors import ServiceNowError
 
-from . import core, incident  # Add more: change, problem, knowledge, catalog, ...
+from . import core, incident, flow, integration, script
 
 # Each module exposes TOOL_DEFINITIONS and execute()
-_MODULES = [core, incident]
+_MODULES = [core, incident, catalog, change, knowledge, problem, task, user, flow, integration, script]
 
 # Role-based packages (same as TypeScript version)
 PACKAGE_TOOL_NAMES: dict[str, list[str]] = {
     "service_desk": [
-        "query_records", "get_record", "get_table_schema",
-        "create_incident", "get_incident", "update_incident",
-        "resolve_incident", "close_incident", "natural_language_search",
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "create_incident", "get_incident", "update_incident", "resolve_incident", "close_incident",
     ],
     "change_coordinator": [
-        "query_records", "get_record",
-        # add change-specific tools when you create change.py
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "create_problem", "get_problem", "update_problem", "resolve_problem",
     ],
-    # Add more packages as you add modules...
+    "catalog_manager": [
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "list_catalog_items", "search_catalog", "get_catalog_item",
+        "create_catalog_item", "update_catalog_item", "order_catalog_item",
+        "create_catalog_variable", "create_catalog_ui_policy",
+        "create_approval_rule", "get_my_approvals", "list_approvals",
+        "approve_request", "reject_request",
+        "get_sla_details", "list_active_slas",
+    ],
+    "knowledge_manager": [
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "list_knowledge_bases", "search_knowledge", "get_knowledge_article",
+        "create_knowledge_article", "update_knowledge_article",
+        "publish_knowledge_article", "retire_knowledge_article",
+    ],
+    "user_admin": [
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "list_users", "create_user", "update_user",
+        "list_groups", "create_group", "update_group",
+        "add_user_to_group", "remove_user_from_group",
+    ],
+    "flow_designer": [
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "list_flows", "get_flow", "trigger_flow",
+        "get_flow_execution", "list_flow_executions", "get_flow_error_log",
+        "list_subflows", "get_subflow",
+        "list_action_instances",
+        "get_process_automation", "list_process_automations",
+        "create_flow", "create_subflow", "create_flow_action",
+        "publish_flow", "test_flow",
+    ],
+    "integration": [
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "list_rest_messages", "get_rest_message", "list_rest_message_functions", "create_rest_message",
+        "list_transform_maps", "get_transform_map", "run_transform_map", "list_transform_field_maps",
+        "list_import_sets", "get_import_set", "create_import_set_row", "list_data_sources",
+        "list_event_registry", "get_event_registry_entry", "register_event", "fire_event", "list_event_log",
+        "list_oauth_applications", "list_credential_aliases",
+    ],
+    "scripting": [
+        "query_records", "get_record", "get_table_schema", "natural_language_search",
+        "list_business_rules", "get_business_rule", "create_business_rule", "update_business_rule",
+        "list_script_includes", "get_script_include", "create_script_include", "update_script_include",
+        "list_client_scripts", "get_client_script", "create_client_script", "update_client_script",
+        "list_changesets", "get_changeset", "commit_changeset", "publish_changeset",
+        "list_ui_policies", "get_ui_policy", "create_ui_policy",
+        "list_ui_actions", "get_ui_action", "create_ui_action", "update_ui_action",
+        "list_acls", "get_acl", "create_acl", "update_acl",
+    ],
 }
 
 

@@ -15,14 +15,23 @@ class OAuthConfig(BaseModel):
     password: str
 
 
+class BearerTokenConfig(BaseModel):
+    token: str
+
+
 class ServiceNowConfig(BaseModel):
     instance_url: str
-    auth_method: Literal["basic", "oauth"] = "basic"
+    auth_method: Literal["basic", "oauth", "bearer"] = "basic"
     basic: BasicAuthConfig | None = None
     oauth: OAuthConfig | None = None
+    bearer: BearerTokenConfig | None = None
     max_retries: int = 3
     retry_delay_ms: int = 1000
     request_timeout_s: int = 30
+    # Circuit breaker settings
+    cb_failure_threshold: int = 5
+    cb_recovery_timeout_s: int = 30
+    cb_half_open_max_calls: int = 1
 
 
 class QueryRecordsParams(BaseModel):
