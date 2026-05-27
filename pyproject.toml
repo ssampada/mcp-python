@@ -15,5 +15,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/servicenow_mcp"]
+
 [project.scripts]
 servicenow-mcp = "servicenow_mcp.server:main"

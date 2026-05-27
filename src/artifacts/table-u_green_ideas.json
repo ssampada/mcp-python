@@ -1,0 +1,72 @@
+{
+  "_meta": {
+    "description": "Custom table definition for Green Ideas submissions",
+    "tables": ["sys_db_object", "sys_dictionary"]
+  },
+  "table": {
+    "table": "sys_db_object",
+    "payload": {
+      "name": "u_green_ideas",
+      "label": "Green Ideas",
+      "super_class": "task",
+      "access": "public",
+      "create_access": true,
+      "read_access": true,
+      "update_access": true,
+      "delete_access": false,
+      "user_role": ""
+    }
+  },
+  "fields": [
+    {
+      "table": "sys_dictionary",
+      "payload": {
+        "name": "u_green_ideas",
+        "element": "u_idea_summary",
+        "column_label": "Idea Summary",
+        "internal_type": "string",
+        "max_length": 4000,
+        "mandatory": false,
+        "active": true
+      }
+    },
+    {
+      "table": "sys_dictionary",
+      "payload": {
+        "name": "u_green_ideas",
+        "element": "u_estimated_savings",
+        "column_label": "Estimated Savings",
+        "internal_type": "string",
+        "max_length": 255,
+        "mandatory": false,
+        "active": true
+      }
+    },
+    {
+      "table": "sys_dictionary",
+      "payload": {
+        "name": "u_green_ideas",
+        "element": "u_department",
+        "column_label": "Department",
+        "internal_type": "reference",
+        "reference": "cmn_department",
+        "max_length": 32,
+        "mandatory": false,
+        "active": true
+      }
+    },
+    {
+      "table": "sys_dictionary",
+      "payload": {
+        "name": "u_green_ideas",
+        "element": "u_requested_item",
+        "column_label": "Requested Item",
+        "internal_type": "reference",
+        "reference": "sc_req_item",
+        "max_length": 32,
+        "mandatory": false,
+        "active": true
+      }
+    }
+  ]
+}

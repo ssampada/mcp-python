@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "description": "Business Rule — creates a u_green_ideas record when a Submit Green Idea RITM is submitted",
+    "table": "sys_script"
+  },
+  "business_rule": {
+    "table": "sys_script",
+    "payload": {
+      "name": "Create Green Idea Record on Submission",
+      "collection": "sc_req_item",
+      "when": "after",
+      "action_insert": true,
+      "action_update": false,
+      "action_delete": false,
+      "action_query": false,
+      "active": true,
+      "order": 100,
+      "filter_condition": "cat_itemDYNAMIC__PLACEHOLDER_CAT_ITEM_SYS_ID__",
+      "script": "(function executeRule(current, previous) {\n    // Only trigger for the 'Submit Green Idea' catalog item\n    var idea = new GlideRecord('u_green_ideas');\n    idea.initialize();\n    idea.short_description = 'Green Idea: ' + current.cat_item.getDisplayValue();\n    idea.u_requested_item = current.sys_id;\n    idea.u_idea_summary = current.variables.idea_summary;\n    idea.u_estimated_savings = current.variables.estimated_savings;\n    idea.u_department = current.variables.department;\n    idea.insert();\n    gs.log('Green Idea record created for RITM: ' + current.number, 'GreenIdea');\n})(current, previous);"
+    }
+  }
+}

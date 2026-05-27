@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "description": "Catalog UI Policy for 'Submit Green Idea' — when Department is selected, make Estimated Savings mandatory",
+    "tables": ["catalog_ui_policy", "catalog_ui_policy_action"]
+  },
+  "ui_policy": {
+    "table": "catalog_ui_policy",
+    "payload": {
+      "short_description": "Require Estimated Savings when Department is selected",
+      "active": true,
+      "run_scripts": false,
+      "reverse_if_false": true,
+      "conditions": "department!=empty"
+    }
+  },
+  "actions": [
+    {
+      "table": "catalog_ui_policy_action",
+      "payload": {
+        "catalog_variable": "estimated_savings",
+        "mandatory": "true",
+        "visible": "leave_alone",
+        "disabled": "leave_alone"
+      }
+    }
+  ]
+}

@@ -21,7 +21,7 @@ class BearerTokenConfig(BaseModel):
 
 class ServiceNowConfig(BaseModel):
     instance_url: str
-    auth_method: Literal["basic", "oauth", "bearer"] = "basic"
+    auth_method: Literal["basic", "oauth", "bearer", "passthrough"] = "basic"
     basic: BasicAuthConfig | None = None
     oauth: OAuthConfig | None = None
     bearer: BearerTokenConfig | None = None

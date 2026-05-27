@@ -377,24 +377,12 @@ TOOL_DEFINITIONS = [
 ]
 
 
-_READ_TOOLS = {
-    "list_business_rules", "get_business_rule",
-    "list_script_includes", "get_script_include",
-    "list_client_scripts", "get_client_script",
-    "list_changesets", "get_changeset",
-    "list_ui_policies", "get_ui_policy",
-    "list_ui_actions", "get_ui_action",
-    "list_acls", "get_acl",
-}
-_ALL_TOOLS = {t["name"] for t in TOOL_DEFINITIONS}
-
-
 async def execute(client: ServiceNowClient, name: str, args: dict[str, Any]) -> Any | None:
-    if name not in _ALL_TOOLS:
+    # All scripting tools require SCRIPTING_ENABLED
+    _SCRIPTING_TOOLS = {t["name"] for t in TOOL_DEFINITIONS}
+    if name not in _SCRIPTING_TOOLS:
         return None
-    # Read tools are Tier 0; write/create tools require SCRIPTING_ENABLED
-    if name not in _READ_TOOLS:
-        require_scripting()
+    require_scripting()
 
     # ── Business Rules ────────────────────────────────────────────────────────
     if name == "list_business_rules":

@@ -1,0 +1,69 @@
+{
+  "table_sys_id": "fb9c79462bf84bd0ef3ff275d891bf09",
+  "field_sys_ids": [
+    {
+      "element": "u_idea_summary",
+      "sys_id": "dcac79462bf84bd0ef3ff275d891bf7f",
+      "pre_existing": false
+    },
+    {
+      "element": "u_estimated_savings",
+      "sys_id": "20ac79462bf84bd0ef3ff275d891bf3d",
+      "pre_existing": false
+    },
+    {
+      "element": "u_department",
+      "sys_id": "f8acf9462bf84bd0ef3ff275d891bf0f",
+      "pre_existing": false
+    },
+    {
+      "element": "u_requested_item",
+      "sys_id": "59acf9462bf84bd0ef3ff275d891bf54",
+      "pre_existing": false
+    }
+  ],
+  "cat_item_sys_id": "a9acf9462bf84bd0ef3ff275d891bfca",
+  "variable_set_links": [
+    {
+      "name": "Requested For",
+      "sys_id": "4eac3d462bf84bd0ef3ff275d891bf2d",
+      "pre_existing": false
+    }
+  ],
+  "variable_sys_ids": [
+    {
+      "name": "idea_summary",
+      "sys_id": "9aac3d462bf84bd0ef3ff275d891bf4a",
+      "pre_existing": false
+    },
+    {
+      "name": "estimated_savings",
+      "sys_id": "6eac3d462bf84bd0ef3ff275d891bf8c",
+      "pre_existing": false
+    },
+    {
+      "name": "department",
+      "sys_id": "3aac3d462bf84bd0ef3ff275d891bfe7",
+      "pre_existing": false
+    }
+  ],
+  "br_sys_id": "4cbcbd462bf84bd0ef3ff275d891bf30",
+  "fulfillment_stage_sys_id": "0bac7d462bf84bd0ef3ff275d891bf1f",
+  "fulfillment_step_sys_ids": [
+    {
+      "sys_id": "53ac7d462bf84bd0ef3ff275d891bf44",
+      "pre_existing": false
+    },
+    {
+      "sys_id": "63ac7d462bf84bd0ef3ff275d891bf75",
+      "pre_existing": false
+    }
+  ],
+  "ui_policy_sys_id": "7bacb1462bf84bd0ef3ff275d891bf7a",
+  "ui_policy_action_sys_ids": [
+    {
+      "sys_id": "00bc7d462bf84bd0ef3ff275d891bfd1",
+      "pre_existing": false
+    }
+  ]
+}

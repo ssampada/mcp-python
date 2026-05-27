@@ -1,0 +1,33 @@
+name: ServiceNow Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  apply-changes:
+    name: Apply Changes to ServiceNow
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Apply Changes to ServiceNow instance
+        uses: ServiceNow/sncicd-apply-changes@v2
+        env:
+          NOW_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          NOW_USERNAME: ${{ secrets.SN_USERNAME }}
+          NOW_PASSWORD: ${{ secrets.SN_PASSWORD }}

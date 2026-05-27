@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "description": "Fulfillment stage and steps for 'Submit Green Idea' — manager approval then task",
+    "tables": ["sc_service_fulfillment_stage", "sc_service_fulfillment_step"]
+  },
+  "stage": {
+    "table": "sc_service_fulfillment_stage",
+    "payload": {
+      "order": 100
+    }
+  },
+  "steps": [
+    {
+      "_comment": "Manager approval — must run before Task",
+      "table": "sc_service_fulfillment_step",
+      "payload": {
+        "service_fulfillment_step_configuration": "38ee146053162010fca7ddeeff7b1221",
+        "order": 100
+      }
+    },
+    {
+      "_comment": "Task — always last after all approvals",
+      "table": "sc_service_fulfillment_step",
+      "payload": {
+        "service_fulfillment_step_configuration": "dc0f364873122010ae42d31ee2f6a7f3",
+        "order": 200
+      }
+    }
+  ]
+}

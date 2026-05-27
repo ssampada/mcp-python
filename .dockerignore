@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+dist/
+*.pyc
+__pycache__/
+src/artifacts/
+scripts/
+test_*.py
+.github/
+.vscode/
+*.egg-info/

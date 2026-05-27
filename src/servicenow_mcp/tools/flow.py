@@ -273,15 +273,9 @@ async def execute(client: ServiceNowClient, name: str, args: dict[str, Any]) -> 
             parts.append("active=true")
         if args.get("query"):
             parts.append(f"nameCONTAINS{args['query']}")
-        try:
-            return await client.query_records(QueryRecordsParams(
-                table="sys_hub_subflow", query="^".join(parts), limit=args.get("limit", 50)
-            ))
-        except ServiceNowError as e:
-            if "INVALID_REQUEST" in e.code or "Invalid table" in str(e):
-                return {"count": 0, "records": [],
-                        "note": "sys_hub_subflow table not available — Flow Designer plugin may not be activated"}
-            raise
+        return await client.query_records(QueryRecordsParams(
+            table="sys_hub_subflow", query="^".join(parts), limit=args.get("limit", 50)
+        ))
 
     elif name == "get_subflow":
         ident = args.get("name_or_sysid")
@@ -325,15 +319,9 @@ async def execute(client: ServiceNowClient, name: str, args: dict[str, Any]) -> 
             parts.append("active=true")
         if args.get("query"):
             parts.append(f"nameCONTAINS{args['query']}^ORdescriptionCONTAINS{args['query']}")
-        try:
-            return await client.query_records(QueryRecordsParams(
-                table="pa_process", query="^".join(parts), limit=args.get("limit", 50)
-            ))
-        except ServiceNowError as e:
-            if "INVALID_REQUEST" in e.code or "Invalid table" in str(e):
-                return {"count": 0, "records": [],
-                        "note": "pa_process table not available — Process Automation plugin may not be activated"}
-            raise
+        return await client.query_records(QueryRecordsParams(
+            table="pa_process", query="^".join(parts), limit=args.get("limit", 50)
+        ))
 
     elif name == "create_flow":
         require_write()

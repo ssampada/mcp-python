@@ -42,7 +42,9 @@ def _build_config() -> ServiceNowConfig:
     oauth = None
     bearer = None
 
-    if auth_method == "basic":
+    if auth_method == "passthrough":
+        pass
+    elif auth_method == "basic":
         basic = BasicAuthConfig(
             username=os.environ.get("SERVICENOW_BASIC_USERNAME", ""),
             password=os.environ.get("SERVICENOW_BASIC_PASSWORD", ""),
@@ -141,7 +143,15 @@ def main() -> None:
         base_app = mcp.sse_app() if args.transport == "sse" else mcp.streamable_http_app()
         app = BearerPassthroughMiddleware(base_app)
 
-        logger.info(f"Listening on {args.host}:{args.port} — bearer token forwarding enabled")
+        oauth_client_id = os.getenv("SERVICENOW_OAUTH_CLIENT_ID")
+        oauth_client_secret = os.getenv("SERVICENOW_OAUTH_CLIENT_SECRET")
+        if config.auth_method == "passthrough" and oauth_client_id and oauth_client_secret:
+            from .utils.oauth_proxy import OAuthProxyMiddleware
+            app = OAuthProxyMiddleware(app, config.instance_url, oauth_client_id, oauth_client_secret)
+            logger.info(f"Listening on {args.host}:{args.port} — OAuth login via ServiceNow enabled")
+        else:
+            logger.info(f"Listening on {args.host}:{args.port} — bearer token forwarding enabled")
+
         uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 

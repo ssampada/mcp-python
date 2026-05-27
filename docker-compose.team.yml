@@ -1,0 +1,27 @@
+# Centralized deployment for a shared team.
+# One container serves all developers — each developer passes their own
+# bearer token via the Authorization header in their Claude MCP config.
+#
+# Usage on the server:
+#   docker compose -f docker-compose.yml -f docker-compose.team.yml up -d
+#
+# Each developer's Claude config (~/.claude.json or Claude Desktop settings):
+#   {
+#     "mcpServers": {
+#       "servicenow": {
+#         "type": "streamable-http",
+#         "url": "http://<server-ip>:8000/mcp",
+#         "headers": { "Authorization": "Bearer <your-personal-token>" }
+#       }
+#     }
+#   }
+
+services:
+  servicenow-mcp:
+    environment:
+      # No default token needed — each request carries its own.
+      # Optional fallback for health checks or admin use:
+      SERVICENOW_BEARER_TOKEN: ${SERVICENOW_BEARER_TOKEN:-}
+      WRITE_ENABLED: "true"
+      SCRIPTING_ENABLED: "false"
+      MCP_TOOL_PACKAGE: full

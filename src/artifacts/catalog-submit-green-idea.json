@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "description": "Catalog Item — Submit Green Idea",
+    "taxonomy_topic": "Environmental",
+    "tables": ["sc_cat_item", "item_option_new", "io_set_item"]
+  },
+  "catalog_item": {
+    "table": "sc_cat_item",
+    "payload": {
+      "name": "Submit Green Idea",
+      "short_description": "Share your eco-friendly ideas",
+      "description": "Use this form to submit eco-friendly ideas that can help reduce environmental impact, save costs, and promote sustainability across the organisation.",
+      "category": "Sustainability",
+      "taxonomy_topic": "Environmental",
+      "active": true,
+      "price": "0",
+      "no_quantity": true,
+      "order": 100,
+      "flow_designer_flow": "21ea92dd53622010fca7ddeeff7b12b1"
+    }
+  },
+  "variable_sets": [
+    {
+      "_comment": "Requested For — must be order 100 (first)",
+      "table": "io_set_item",
+      "lookup_name": "Requested For",
+      "payload": {
+        "order": 100
+      }
+    },
+    {
+      "_comment": "Watch List — must be last (order 400)",
+      "table": "io_set_item",
+      "lookup_name": "Watch List",
+      "payload": {
+        "order": 400
+      }
+    }
+  ],
+  "variables": [
+    {
+      "table": "item_option_new",
+      "payload": {
+        "name": "idea_summary",
+        "question_text": "Idea Summary",
+        "type": "multi_line_text",
+        "order": 200,
+        "mandatory": false,
+        "active": true,
+        "help_text": "Describe your eco-friendly idea in detail"
+      }
+    },
+    {
+      "table": "item_option_new",
+      "payload": {
+        "name": "estimated_savings",
+        "question_text": "Estimated Savings",
+        "type": "single_line_text",
+        "order": 300,
+        "mandatory": false,
+        "active": true,
+        "help_text": "Estimated cost or resource savings (e.g. $5,000/year, 20% energy reduction)"
+      }
+    },
+    {
+      "table": "item_option_new",
+      "payload": {
+        "name": "department",
+        "question_text": "Department",
+        "type": "reference",
+        "lookup_table": "cmn_department",
+        "lookup_value": "name",
+        "order": 300,
+        "mandatory": false,
+        "active": true,
+        "help_text": "Select the department this idea applies to"
+      }
+    }
+  ]
+}

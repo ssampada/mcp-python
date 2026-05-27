@@ -1,0 +1,25 @@
+[Unit]
+Description=ServiceNow MCP Server (streamable-http)
+After=network.target
+
+[Service]
+Type=simple
+User=mcp
+Group=mcp
+WorkingDirectory=/opt/servicenow-mcp
+ExecStart=/opt/servicenow-mcp/venv/bin/servicenow-mcp --transport streamable-http --host 0.0.0.0 --port 8000
+EnvironmentFile=/opt/servicenow-mcp/.env
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/servicenow-mcp
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

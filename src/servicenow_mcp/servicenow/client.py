@@ -13,6 +13,7 @@ import httpx
 from .types import ServiceNowConfig, QueryRecordsParams, QueryRecordsResponse
 from ..utils.errors import ServiceNowError
 from ..utils.logging import logger
+from ..utils.request_context import request_bearer_token
 
 
 # ── Circuit Breaker ─────────────────────────────────────────────────────
@@ -148,8 +149,8 @@ class ServiceNowClient:
     # ── Authentication ──────────────────────────────────────────────────
 
     async def _authenticate(self) -> None:
-        if self.auth_method in ("basic", "bearer"):
-            return  # basic/bearer auth is sent inline per-request
+        if self.auth_method in ("basic", "bearer", "passthrough"):
+            return  # basic/bearer/passthrough auth is sent inline per-request
 
         # Reuse valid OAuth token
         if self._access_token and time.time() < self._token_expiry:
@@ -176,14 +177,15 @@ class ServiceNowClient:
         self._token_expiry = time.time() + token_data["expires_in"] * 0.9
 
     def _auth_headers(self) -> dict[str, str]:
-        # Per-request token forwarded from the MCP client takes priority.
-        # This allows a shared server to serve multiple developers, each
-        # passing their own service-account token via the Authorization header.
-        from ..utils.request_context import request_bearer_token
-        per_request = request_bearer_token.get()
-        if per_request:
-            return {"Authorization": f"Bearer {per_request}"}
+        per_request_token = request_bearer_token.get()
+        if per_request_token:
+            return {"Authorization": f"Bearer {per_request_token}"}
 
+        if self.auth_method == "passthrough":
+            raise ServiceNowError(
+                "No Authorization header on request. Each user must provide their own ServiceNow bearer token.",
+                "AUTHENTICATION_FAILED",
+            )
         if self.auth_method == "basic" and self._basic:
             creds = base64.b64encode(
                 f"{self._basic.username}:{self._basic.password}".encode()

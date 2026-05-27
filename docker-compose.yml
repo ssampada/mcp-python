@@ -1,0 +1,37 @@
+# Single-developer / local use:
+#   docker compose up -d
+#   (reads credentials from .env)
+#
+# Centralized multi-developer:
+#   docker compose -f docker-compose.yml -f docker-compose.team.yml up -d
+
+x-mcp-defaults: &mcp-defaults
+  build: .
+  image: servicenow-mcp:latest
+  restart: unless-stopped
+  environment:
+    SERVICENOW_INSTANCE_URL: ${SERVICENOW_INSTANCE_URL}
+    SERVICENOW_AUTH_METHOD: ${SERVICENOW_AUTH_METHOD:-bearer}
+    SERVICENOW_BEARER_TOKEN: ${SERVICENOW_BEARER_TOKEN:-}
+    SERVICENOW_BASIC_USERNAME: ${SERVICENOW_BASIC_USERNAME:-}
+    SERVICENOW_BASIC_PASSWORD: ${SERVICENOW_BASIC_PASSWORD:-}
+    WRITE_ENABLED: ${WRITE_ENABLED:-false}
+    CMDB_WRITE_ENABLED: ${CMDB_WRITE_ENABLED:-false}
+    SCRIPTING_ENABLED: ${SCRIPTING_ENABLED:-false}
+    NOW_ASSIST_ENABLED: ${NOW_ASSIST_ENABLED:-false}
+    MCP_TOOL_PACKAGE: ${MCP_TOOL_PACKAGE:-full}
+    MCP_TRANSPORT: streamable-http
+    MCP_HOST: "0.0.0.0"
+    MCP_PORT: "8000"
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp')"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 10s
+
+services:
+  servicenow-mcp:
+    <<: *mcp-defaults
+    ports:
+      - "${MCP_PORT:-8000}:8000"
