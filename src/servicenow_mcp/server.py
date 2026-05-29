@@ -26,7 +26,7 @@ from .servicenow.client import ServiceNowClient
 from .servicenow.types import ServiceNowConfig, BasicAuthConfig, OAuthConfig, BearerTokenConfig
 from .tools import get_tools, execute_tool
 from .utils.errors import ServiceNowError
-from .utils.logging import logger
+from .utils.logging import logger, audit_log
 
 
 def _build_config() -> ServiceNowConfig:
@@ -125,12 +125,15 @@ def main() -> None:
         try:
             result = await execute_tool(client, name, arguments)
             text = result if isinstance(result, str) else json.dumps(result, indent=2, default=str)
+            audit_log(name, arguments, "success")
             return [TextContent(type="text", text=text)]
         except ServiceNowError as e:
             logger.error(f"Tool error: {name} — {e}")
+            audit_log(name, arguments, "error", str(e))
             return [TextContent(type="text", text=f"Error: {e} (Code: {e.code})")]
         except Exception as e:
             logger.error(f"Unexpected error: {name} — {e}")
+            audit_log(name, arguments, "error", str(e))
             return [TextContent(type="text", text=f"Error: {e}")]
 
     logger.info(f"servicenow-mcp starting [{len(tools)} tools] transport={args.transport}")
