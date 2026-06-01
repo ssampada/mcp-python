@@ -20,6 +20,7 @@ import sys
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import Tool, TextContent
 
 from .servicenow.client import ServiceNowClient
@@ -76,7 +77,10 @@ def _build_config() -> ServiceNowConfig:
     )
 
 
-mcp = FastMCP("servicenow-mcp")
+mcp = FastMCP(
+    "servicenow-mcp",
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+)
 
 
 def main() -> None:
