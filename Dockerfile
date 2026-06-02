@@ -13,7 +13,7 @@ WORKDIR /app
 
 COPY --from=builder /dist/*.whl /tmp/
 
-RUN pip install --no-cache-dir /tmp/*.whl[http] && rm /tmp/*.whl
+RUN pip install --no-cache-dir /tmp/*.whl && rm /tmp/*.whl
 
 ENV MCP_TRANSPORT=streamable-http \
     MCP_HOST=0.0.0.0 \
