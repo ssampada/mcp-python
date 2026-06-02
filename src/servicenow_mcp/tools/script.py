@@ -1,7 +1,8 @@
 """Scripting Management tools — Business Rules, Script Includes, Client Scripts,
-UI Policies, UI Actions, ACLs, and Update Sets.
+UI Policies, UI Actions, and ACLs.
 All tools require SCRIPTING_ENABLED=true (Tier 3).
 Note: ServiceNow supports ES2021 (async/await, ?., ??) in script bodies.
+Update Set management has moved to tools/update_set.py.
 """
 from __future__ import annotations
 import re
@@ -172,52 +173,6 @@ TOOL_DEFINITIONS = [
                 "fields": {"type": "object", "description": "Fields to update (script, active, name, type, etc.)"},
             },
             "required": ["sys_id", "fields"],
-        },
-    },
-    # ── Update Sets (Changesets) ──────────────────────────────────────────────
-    {
-        "name": "list_changesets",
-        "description": 'List update sets (changesets) (requires SCRIPTING_ENABLED=true)',
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "state": {"type": "string", "description": 'Filter by state: "in progress", "complete", "ignore"'},
-                "limit": {"type": "number", "description": "Max results (default: 20)"},
-            },
-            "required": [],
-        },
-    },
-    {
-        "name": "get_changeset",
-        "description": "Get details of an update set (requires SCRIPTING_ENABLED=true)",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "sys_id_or_name": {"type": "string", "description": "Update set sys_id or name"},
-            },
-            "required": ["sys_id_or_name"],
-        },
-    },
-    {
-        "name": "commit_changeset",
-        "description": "Commit an update set (requires SCRIPTING_ENABLED=true)",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "sys_id": {"type": "string", "description": "System ID of the update set"},
-            },
-            "required": ["sys_id"],
-        },
-    },
-    {
-        "name": "publish_changeset",
-        "description": "Publish/export an update set to XML for deployment (requires SCRIPTING_ENABLED=true)",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "sys_id": {"type": "string", "description": "System ID of the update set"},
-            },
-            "required": ["sys_id"],
         },
     },
     # ── UI Policies ───────────────────────────────────────────────────────────
@@ -517,45 +472,6 @@ async def execute(client: ServiceNowClient, name: str, args: dict[str, Any]) -> 
             raise ServiceNowError("sys_id and fields are required", "INVALID_REQUEST")
         result = await client.update_record("sys_script_client", args["sys_id"], args["fields"])
         return {**result, "summary": f"Updated client script {args['sys_id']}"}
-
-    # ── Update Sets (Changesets) ──────────────────────────────────────────────
-    elif name == "list_changesets":
-        parts = []
-        if args.get("state"):
-            parts.append(f"state={args['state']}")
-        resp = await client.query_records(QueryRecordsParams(
-            table="sys_update_set",
-            query="^".join(parts),
-            limit=args.get("limit", 20),
-            fields="sys_id,name,state,description,application,sys_updated_on",
-        ))
-        return {"count": resp.count, "changesets": resp.records,
-                "note": "Latest ReleaseOps provides automated deployment pipelines for changesets"}
-
-    elif name == "get_changeset":
-        ident = args.get("sys_id_or_name")
-        if not ident:
-            raise ServiceNowError("sys_id_or_name is required", "INVALID_REQUEST")
-        if re.match(r"^[0-9a-fA-F]{32}$", ident):
-            return await client.get_record("sys_update_set", ident)
-        resp = await client.query_records(QueryRecordsParams(
-            table="sys_update_set", query=f"name={ident}^ORsys_id={ident}", limit=1
-        ))
-        if resp.count == 0:
-            raise ServiceNowError(f"Changeset not found: {ident}", "NOT_FOUND")
-        return resp.records[0]
-
-    elif name == "commit_changeset":
-        if not args.get("sys_id"):
-            raise ServiceNowError("sys_id is required", "INVALID_REQUEST")
-        result = await client.update_record("sys_update_set", args["sys_id"], {"state": "complete"})
-        return {**result, "summary": f"Committed changeset {args['sys_id']}"}
-
-    elif name == "publish_changeset":
-        if not args.get("sys_id"):
-            raise ServiceNowError("sys_id is required", "INVALID_REQUEST")
-        result = await client.update_record("sys_update_set", args["sys_id"], {"state": "complete"})
-        return {**result, "summary": f"Published changeset {args['sys_id']}"}
 
     # ── UI Policies ───────────────────────────────────────────────────────────
     elif name == "list_ui_policies":

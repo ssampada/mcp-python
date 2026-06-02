@@ -9,10 +9,10 @@ from servicenow_mcp.tools import catalog, change, knowledge, problem, task, user
 from ..servicenow.client import ServiceNowClient
 from ..utils.errors import ServiceNowError
 
-from . import core, incident, flow, integration, script
+from . import core, incident, flow, integration, script, update_set
 
 # Each module exposes TOOL_DEFINITIONS and execute()
-_MODULES = [core, incident, catalog, change, knowledge, problem, task, user, flow, integration, script]
+_MODULES = [core, incident, catalog, change, knowledge, problem, task, user, flow, integration, script, update_set]
 
 # Role-based packages (same as TypeScript version)
 PACKAGE_TOOL_NAMES: dict[str, list[str]] = {
@@ -68,7 +68,11 @@ PACKAGE_TOOL_NAMES: dict[str, list[str]] = {
         "list_business_rules", "get_business_rule", "create_business_rule", "update_business_rule",
         "list_script_includes", "get_script_include", "create_script_include", "update_script_include",
         "list_client_scripts", "get_client_script", "create_client_script", "update_client_script",
-        "list_changesets", "get_changeset", "commit_changeset", "publish_changeset",
+        "list_update_sets", "get_update_set", "create_update_set", "update_update_set",
+        "list_update_set_changes", "get_current_update_set", "set_current_update_set",
+        "complete_update_set", "reopen_update_set", "ignore_update_set",
+        "move_change_to_update_set",
+        "list_remote_update_sets", "preview_remote_update_set", "commit_remote_update_set",
         "list_ui_policies", "get_ui_policy", "create_ui_policy",
         "list_ui_actions", "get_ui_action", "create_ui_action", "update_ui_action",
         "list_acls", "get_acl", "create_acl", "update_acl",
