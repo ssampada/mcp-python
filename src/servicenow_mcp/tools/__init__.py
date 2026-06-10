@@ -7,7 +7,10 @@ from servicenow_mcp.tools import catalog, change, knowledge, problem, task, user
 
 
 from ..servicenow.client import ServiceNowClient
+from ..utils.cache import ToolResponseCache, is_cacheable
 from ..utils.errors import ServiceNowError
+from ..utils.logging import logger
+from ..utils.request_context import request_bearer_token
 
 from . import core, incident, flow, integration, script, update_set
 
@@ -97,9 +100,25 @@ def get_tools() -> list[dict]:
     return [t for t in all_tools if t["name"] in allowed_set]
 
 
-async def execute_tool(client: ServiceNowClient, name: str, args: dict[str, Any]) -> Any:
+async def execute_tool(
+    client: ServiceNowClient,
+    name: str,
+    args: dict[str, Any],
+    cache: ToolResponseCache | None = None,
+) -> Any:
+    user_token = request_bearer_token.get()
+    cache_active = cache is not None and cache.enabled and is_cacheable(name)
+
+    if cache_active:
+        hit = await cache.get(name, args, user_token)
+        if hit is not None:
+            logger.info(f"Cache HIT: {name}")
+            return hit
+
     for mod in _MODULES:
         result = await mod.execute(client, name, args)
         if result is not None:
+            if cache_active:
+                await cache.set(name, args, user_token, result)
             return result
     raise ServiceNowError(f"Unknown tool: {name}", "UNKNOWN_TOOL")

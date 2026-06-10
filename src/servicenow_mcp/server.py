@@ -26,6 +26,7 @@ from mcp.types import Tool, TextContent
 from .servicenow.client import ServiceNowClient
 from .servicenow.types import ServiceNowConfig, BasicAuthConfig, OAuthConfig, BearerTokenConfig
 from .tools import get_tools, execute_tool
+from .utils.cache import build_cache_from_env
 from .utils.errors import ServiceNowError
 from .utils.logging import logger, audit_log
 
@@ -109,6 +110,7 @@ def main() -> None:
     config = _build_config()
     client = ServiceNowClient(config)
     tools = get_tools()
+    cache = build_cache_from_env()
 
     server = mcp._mcp_server
 
@@ -127,7 +129,7 @@ def main() -> None:
     async def _call_tool(name: str, arguments: dict) -> list[TextContent]:
         logger.info(f"Tool called: {name}")
         try:
-            result = await execute_tool(client, name, arguments)
+            result = await execute_tool(client, name, arguments, cache=cache)
             text = result if isinstance(result, str) else json.dumps(result, indent=2, default=str)
             audit_log(name, arguments, "success")
             return [TextContent(type="text", text=text)]

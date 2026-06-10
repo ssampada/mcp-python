@@ -23,6 +23,11 @@ x-mcp-defaults: &mcp-defaults
     MCP_TRANSPORT: streamable-http
     MCP_HOST: "0.0.0.0"
     MCP_PORT: "8000"
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
+  depends_on:
+    redis:
+      condition: service_healthy
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp')"]
     interval: 30s
@@ -35,3 +40,18 @@ services:
     <<: *mcp-defaults
     ports:
       - "${MCP_PORT:-8000}:8000"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:
